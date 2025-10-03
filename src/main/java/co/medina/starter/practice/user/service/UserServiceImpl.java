@@ -22,14 +22,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User create(UserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new DataIntegrityViolationException("Email already exists");
         }
         User user = User.builder()
-                .email(request.getEmail())
-                .mobileNumber(request.getMobileNumber())
-                .name(request.getName())
-                .address(request.getAddress())
+                .email(request.email())
+                .mobileNumber(request.mobileNumber())
+                .name(request.name())
+                .address(request.address())
                 .build();
         return userRepository.save(user);
     }
@@ -51,14 +51,14 @@ public class UserServiceImpl implements UserService {
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + id));
 
-        if (!existing.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+        if (!existing.getEmail().equals(request.email()) && userRepository.existsByEmail(request.email())) {
             throw new DataIntegrityViolationException("Email already exists");
         }
 
-        existing.setEmail(request.getEmail());
-        existing.setMobileNumber(request.getMobileNumber());
-        existing.setName(request.getName());
-        existing.setAddress(request.getAddress());
+        existing.setEmail(request.email());
+        existing.setMobileNumber(request.mobileNumber());
+        existing.setName(request.name());
+        existing.setAddress(request.address());
         return userRepository.save(existing);
     }
 

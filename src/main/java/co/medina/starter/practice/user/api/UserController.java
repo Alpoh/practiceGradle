@@ -21,31 +21,32 @@ import java.util.NoSuchElementException;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @PostMapping
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request) {
         var created = userService.create(request);
         return ResponseEntity.created(URI.create("/api/users/" + created.getId()))
-                .body(UserMapper.toResponse(created));
+                .body(userMapper.toResponse(created));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> get(@PathVariable Long id) {
         return userService.getById(id)
-                .map(u -> ResponseEntity.ok(UserMapper.toResponse(u)))
+                .map(u -> ResponseEntity.ok(userMapper.toResponse(u)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping
     public Page<UserResponse> list(Pageable pageable) {
-        return userService.getAll(pageable).map(UserMapper::toResponse);
+        return userService.getAll(pageable).map(userMapper::toResponse);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
         try {
             var updated = userService.update(id, request);
-            return ResponseEntity.ok(UserMapper.toResponse(updated));
+            return ResponseEntity.ok(userMapper.toResponse(updated));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         }

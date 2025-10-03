@@ -34,12 +34,7 @@ class UserServiceImplTest {
 
     @Test
     void create_shouldPersistNewUser_whenEmailNotExists() {
-        // given
-        var req = new UserRequest();
-        req.setEmail("john.doe@example.com");
-        req.setName("John Doe");
-        req.setMobileNumber("123");
-        req.setAddress("Some Ave 123");
+        var req = new UserRequest("john.doe@example.com", "123", "John Doe", "Some Ave 123");
 
         given(userRepository.existsByEmail("john.doe@example.com")).willReturn(false);
         given(userRepository.save(any(User.class))).willAnswer(inv -> {
@@ -48,10 +43,8 @@ class UserServiceImplTest {
             return u;
         });
 
-        // when
         var created = userService.create(req);
 
-        // then
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getEmail()).isEqualTo("john.doe@example.com");
@@ -60,9 +53,7 @@ class UserServiceImplTest {
 
     @Test
     void create_shouldThrow_whenEmailExists() {
-        var req = new UserRequest();
-        req.setEmail("dup@example.com");
-        req.setName("Dup");
+        var req = new UserRequest("dup@example.com", null, "Dup", null);
         given(userRepository.existsByEmail("dup@example.com")).willReturn(true);
 
         assertThatThrownBy(() -> userService.create(req))
