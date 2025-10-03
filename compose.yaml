@@ -1,0 +1,15 @@
+services:
+  app:
+    image: gradle:8.10.2-jdk21
+    working_dir: /home/gradle/project
+    volumes:
+      - ./:/home/gradle/project
+      - gradle-cache:/home/gradle/.gradle
+    command: ["gradle", "bootRun"]
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+
+volumes:
+  gradle-cache:
