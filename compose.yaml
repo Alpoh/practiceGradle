@@ -7,7 +7,7 @@ services:
       - gradle-cache:/home/gradle/.gradle
     command: ["gradle", "bootRun"]
     ports:
-      - "8080:8080"
+      - "8080:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=default
 
