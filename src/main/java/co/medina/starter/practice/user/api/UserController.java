@@ -3,16 +3,17 @@ package co.medina.starter.practice.user.api;
 import co.medina.starter.practice.user.api.dto.UserRequest;
 import co.medina.starter.practice.user.api.dto.UserResponse;
 import co.medina.starter.practice.user.service.UserService;
-import io.vavr.control.Either;
-import io.vavr.control.Option;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -24,16 +25,18 @@ public class UserController {
     private final UserMapper userMapper;
 
     @PostMapping
-    public Either<String, UserResponse> create(@Valid @RequestBody UserRequest request) {
+    public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request) {
         var created = userService.create(request);
-        return Either.right(userMapper.toResponse(created));
+        var body = userMapper.toResponse(created);
+        return ResponseEntity.created(URI.create("/api/users/" + body.getId())).body(body);
     }
 
     @GetMapping("/{id}")
-    public Either<String, UserResponse> get(@PathVariable Long id) {
-        return Option.ofOptional(userService.getById(id))
-                .map(u -> Either.<String, UserResponse>right(userMapper.toResponse(u)))
-                .getOrElse(Either.left("User not found"));
+    public ResponseEntity<UserResponse> get(@PathVariable Long id) {
+        return userService.getById(id)
+                .map(userMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     @GetMapping
@@ -42,22 +45,22 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public Either<String, UserResponse> update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
+    public ResponseEntity<UserResponse> update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
         try {
             var updated = userService.update(id, request);
-            return Either.right(userMapper.toResponse(updated));
+            return ResponseEntity.ok(userMapper.toResponse(updated));
         } catch (NoSuchElementException e) {
-            return Either.left("User not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
     @DeleteMapping("/{id}")
-    public Either<String, String> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         try {
             userService.delete(id);
-            return Either.right("deleted");
+            return ResponseEntity.noContent().build();
         } catch (NoSuchElementException e) {
-            return Either.left("User not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
@@ -65,5 +68,17 @@ public class UserController {
     @ResponseStatus(HttpStatus.CONFLICT)
     public String handleConflict(DataIntegrityViolationException ex) {
         return ex.getMessage();
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleValidation(MethodArgumentNotValidException ex) {
+        return "Validation failed";
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public String handleGeneric(Exception ex) {
+        return "Internal server error";
     }
 }
