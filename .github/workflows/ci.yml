@@ -1,16 +1,18 @@
-name: SNAPSHOT - Build and Test
-name: Build
+name: CI
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write
 
     steps:
       - name: Checkout
@@ -25,14 +27,19 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Ensure Gradle wrapper is executable
-        run: chmod +x ./gradlew
+      - name: Normalize Gradle wrapper (LF + exec permission)
+        run: |
+          git config core.autocrlf false
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ls -l gradlew
+          file gradlew
 
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v2
 
       - name: Build and test
-        run: ./gradlew --no-daemon clean test
+        run: bash ./gradlew --no-daemon clean test
 
       - name: Upload test reports
         if: always()
@@ -42,43 +49,3 @@ jobs:
           path: |
             **/build/reports/tests/test
             **/build/test-results/test
-on:
-  pull_request:
-    branches:
-      - develop
-
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build and test
-        run: ./gradlew --no-daemon clean test
-
-      - name: Upload test reports (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-test-results
-          path: |
-            build/test-results/test
-            build/reports/tests/test
