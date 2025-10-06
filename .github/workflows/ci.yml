@@ -2,10 +2,6 @@ name: CI
 
 on:
   pull_request:
-  push:
-    # Avoid duplicate runs with release workflow on master
-    branches-ignore:
-      - master
 
 concurrency:
   group: ci-${{ github.ref }}
