@@ -31,17 +31,27 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-integration")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.integration:spring-integration-http")
-    implementation("org.springframework.integration:spring-integration-jpa")
-    implementation("org.springframework.security:spring-security-messaging")
+    // Validation
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    // JWT dependencies
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+
+    implementation("io.vavr:vavr:0.10.4")
+
     compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
+    implementation("org.mapstruct:mapstruct:1.6.2")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.2")
+
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     runtimeOnly("com.h2database:h2")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.projectlombok:lombok")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.integration:spring-integration-test")
     testImplementation("org.springframework.security:spring-security-test")
