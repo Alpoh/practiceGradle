@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   release:
@@ -17,16 +18,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Create or bump tag
         id: tag
-        uses: anothrNick/github-tag-action@v1
+        uses: anothrNick/github-tag-action@v1.66.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           release_branches: master
-          tag_prefix: v
 
       - name: Build artifact (optional)
         run: ./gradlew build
@@ -39,4 +41,3 @@ jobs:
             build/libs/*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
