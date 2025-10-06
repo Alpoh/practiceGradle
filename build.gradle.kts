@@ -31,8 +31,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-integration")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    // Validation
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    // JWT dependencies
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
     implementation("io.vavr:vavr:0.10.4")
