@@ -2,10 +2,11 @@ plugins {
     java
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
+    id("maven-publish")
 }
 
 group = "co.medina.starter"
-version = "0.0.1-SNAPSHOT"
+version = System.getenv("PROJECT_VERSION") ?: "0.0.1-SNAPSHOT"
 description = "practice"
 
 java {
@@ -60,4 +61,23 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            val repo = System.getenv("GITHUB_REPOSITORY") ?: "OWNER/REPO"
+            url = uri("https://maven.pkg.github.com/$repo")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }

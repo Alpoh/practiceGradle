@@ -2,15 +2,14 @@ package co.medina.starter.practice.user.service;
 
 import co.medina.starter.practice.user.api.dto.UserRequest;
 import co.medina.starter.practice.user.domain.User;
+import io.vavr.control.Either;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.Optional;
-
 public interface UserService {
-    User create(UserRequest request);
-    Optional<User> getById(Long id);
-    Page<User> getAll(Pageable pageable);
-    User update(Long id, UserRequest request);
-    void delete(Long id);
+    Either<Throwable, User> create(UserRequest request);
+    Either<Throwable, User> getById(Long id);
+    Either<Throwable, Page<User>> getAll(Pageable pageable);
+    Either<Throwable, User> update(Long id, UserRequest request);
+    Either<Throwable, Void> delete(Long id);
 }
