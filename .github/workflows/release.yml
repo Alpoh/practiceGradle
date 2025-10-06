@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,11 +32,16 @@ jobs:
           DEFAULT_BUMP: patch
           RELEASE_BRANCHES: master
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Normalize Gradle wrapper (LF + exec permission)
+        run: |
+          git config core.autocrlf false
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ls -l gradlew
+          file gradlew
 
-      - name: Build artifact (optional)
-        run: ./gradlew build
+      - name: Build artifact
+        run: bash ./gradlew --no-daemon build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

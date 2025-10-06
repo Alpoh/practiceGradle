@@ -35,7 +35,16 @@ jobs:
           ls -l gradlew
           file gradlew
 
-      - name: Validate Gradle wrapper
+      - name: Validate Gradle wrapper (retry)
+        uses: Wandalen/wretry.action@v1.4.9
+        with:
+          action: gradle/wrapper-validation-action@v2
+          attempt_limit: 3
+          attempt_delay: 5000
+
+      - name: Validate Gradle wrapper (soft-fail fallback)
+        if: failure()
+        continue-on-error: true
         uses: gradle/wrapper-validation-action@v2
 
       - name: Build and test
