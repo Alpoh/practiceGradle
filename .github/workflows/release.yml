@@ -26,9 +26,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-        with:
-          default_bump: patch
-          release_branches: master
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: master
 
       - name: Build artifact (optional)
         run: ./gradlew build
