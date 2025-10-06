@@ -4,6 +4,7 @@ import co.medina.starter.practice.user.api.dto.UserRequest;
 import co.medina.starter.practice.user.domain.User;
 import co.medina.starter.practice.user.repo.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -14,7 +15,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -28,9 +28,18 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
+    private AutoCloseable mocks;
+
     @BeforeEach
     void setup() {
-        MockitoAnnotations.openMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 
     @Test
@@ -44,7 +53,7 @@ class UserServiceImplTest {
             return u;
         });
 
-        var created = userService.create(req);
+        var created = userService.create(req).get();
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
@@ -57,8 +66,9 @@ class UserServiceImplTest {
         var req = new UserRequest("dup@example.com", null, "Dup", null);
         given(userRepository.existsByEmail("dup@example.com")).willReturn(true);
 
-        assertThatThrownBy(() -> userService.create(req))
-                .isInstanceOf(DataIntegrityViolationException.class)
+        var result = userService.create(req);
+        assertThat(result.isLeft()).isTrue();
+        assertThat(result.getLeft()).isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("Email already exists");
 
         verify(userRepository, never()).save(any());
@@ -68,6 +78,7 @@ class UserServiceImplTest {
     void getById_shouldReturnUser_whenExists() {
         given(userRepository.findById(99L)).willReturn(Optional.of(User.builder().id(99L).email("a@b.com").name("A").build()));
         var found = userService.getById(99L);
-        assertThat(found).isPresent();
+        assertThat(found.isRight()).isTrue();
+        assertThat(found.get().getId()).isEqualTo(99L);
     }
 }
