@@ -1,15 +1,15 @@
-name: Release Publish
+name: Snapshot Publish
 
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
   build-test-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
     steps:
       - name: Checkout
@@ -24,7 +24,7 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      - name: Compute next release version
+      - name: Compute next snapshot version
         id: ver
         shell: bash
         run: |
@@ -38,30 +38,13 @@ jobs:
             base="$major.$minor.$patch"
           fi
           echo "base=$base" >> $GITHUB_OUTPUT
-          echo "PROJECT_VERSION=$base" >> $GITHUB_ENV
-          echo "Next release: $base"
+          echo "PROJECT_VERSION=$base-SNAPSHOT" >> $GITHUB_ENV
+          echo "Next snapshot: $base-SNAPSHOT"
 
       - name: Build and test
         run: ./gradlew --no-daemon clean test
 
-      - name: Publish release to GitHub Packages
+      - name: Publish snapshot to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon publish
-
-      - name: Create Git tag
-        env:
-          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "v${PROJECT_VERSION}"
-          git push origin "v${PROJECT_VERSION}"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.PROJECT_VERSION }}
-          name: v${{ env.PROJECT_VERSION }}
-          draft: false
-          prerelease: false
