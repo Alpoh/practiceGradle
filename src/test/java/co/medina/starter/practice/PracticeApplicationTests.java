@@ -7,9 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 class PracticeApplicationTests {
-
     @InjectMocks
-    private PracticeApplication practiceApplication;
+    PracticeApplication practiceApplication;
 
     @Test
     void contextLoads() {
