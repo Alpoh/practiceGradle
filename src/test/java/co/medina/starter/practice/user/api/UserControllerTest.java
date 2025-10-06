@@ -7,14 +7,18 @@ import co.medina.starter.practice.user.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import co.medina.starter.practice.security.JwtUtil;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -34,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(UserControllerTest.TestConfig.class)
 class UserControllerTest {
 
     @Autowired
@@ -42,11 +47,34 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Mock
+    @Autowired
     private UserService userService;
 
-    @Mock
+    @Autowired
     private UserMapper userMapper;
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class TestConfig {
+        @Bean
+        public UserService userService() {
+            return Mockito.mock(UserService.class);
+        }
+
+        @Bean
+        public UserMapper userMapper() {
+            return Mockito.mock(UserMapper.class);
+        }
+
+        @Bean
+        public JwtUtil jwtUtil() {
+            return Mockito.mock(JwtUtil.class);
+        }
+
+        @Bean
+        public UserDetailsService userDetailsService() {
+            return Mockito.mock(UserDetailsService.class);
+        }
+    }
 
     @Test
     @DisplayName("POST /api/users - 201 Created happy path")
