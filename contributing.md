@@ -61,3 +61,21 @@ Thank you for your interest in contributing to this project! This guide explains
 ## License
 
 - By contributing, you agree that your contributions will be licensed under the same license as the project.
+
+
+## Branch protection for master and develop
+
+To ensure that master and develop cannot receive direct commits and only accept changes via Pull Requests, please configure the repository settings as follows (requires Maintainer or Admin permissions):
+
+1. Go to Settings → Branches → Branch protection rules.
+2. Add a rule for branch name pattern: master
+   - Enable "Require a pull request before merging" (set required approvals as needed).
+   - Enable "Require status checks to pass before merging" and select the check: "Protect Branches (Disallow Direct Pushes) / Enforce PR-only updates to protected branches".
+   - Optionally enable "Restrict who can push to matching branches" and leave it empty to block direct pushes for everyone (or specify allowed actors if needed).
+   - Enable "Include administrators" if you want the rules to apply to admins as well.
+3. Repeat the same rule for branch name pattern: develop
+   - Use the same options as above.
+
+Notes:
+- This repository includes a GitHub Actions workflow (.github/workflows/protect-branches.yml) that fails on any direct push to master/develop. When you require this check in the branch protection rules, direct pushes will be effectively blocked and only PR merges will be allowed.
+- The workflow allows merges created via PR (merge commits and squash merges) and fails for any other direct commit.

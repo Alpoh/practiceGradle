@@ -1,0 +1,50 @@
+name: Protect Branches (Disallow Direct Pushes)
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  enforce-pr-only:
+    name: Enforce PR-only updates to protected branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate push source
+        id: validate
+        shell: bash
+        run: |
+          echo "Ref: $GITHUB_REF"
+          echo "SHA: $GITHUB_SHA"
+          echo "Head message: '${{ github.event.head_commit.message }}'"
+
+          # Determine parent count (merge commits have >= 2 parents)
+          parent_count=$(git show -s --format=%P "$GITHUB_SHA" | wc -w)
+          echo "Parent count: $parent_count"
+
+          # Heuristics to detect PR merges:
+          # 1) Merge commit created by the default merge strategy (message contains 'Merge pull request')
+          # 2) Squash merge default message often contains '(#<number>)'
+          # 3) Parent count >= 2 (non-squash merge commit)
+          head_msg='${{ github.event.head_commit.message }}'
+          if [[ "$head_msg" == *"Merge pull request"* ]] || [[ "$head_msg" == *"(#"* ]] || [[ "$parent_count" -ge 2 ]]; then
+            echo "is_pr_merge=true" >> "$GITHUB_OUTPUT"
+            echo "This push appears to be the result of a Pull Request merge. Allowing."
+            exit 0
+          fi
+
+          echo "is_pr_merge=false" >> "$GITHUB_OUTPUT"
+          echo "Direct pushes to 'master' and 'develop' are not allowed. Please create a Pull Request and merge it instead." 1>&2
+          echo "To fully enforce this, enable Branch Protection Rules in repository settings and require this workflow as a status check." 1>&2
+          exit 1
+
+      - name: Summary
+        if: steps.validate.outputs.is_pr_merge == 'true'
+        run: |
+          echo "Push validated as a PR merge commit."
