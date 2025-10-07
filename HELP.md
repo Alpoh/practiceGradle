@@ -177,3 +177,44 @@ Security notes
 - Use regular user accounts where possible; avoid running containers with elevated privileges unless needed.
 
 With Docker installed, you can use the provided compose.yaml to run the app for development quickly. If you want to build a production image later, consider adding a Dockerfile and using Spring Boot’s Boot Build Image or a multi-stage Dockerfile for JDK 21.
+
+---
+
+## Postman collections and environment
+
+To quickly explore and test the API endpoints, Postman assets are included in this repository.
+
+Files:
+- postman\Practice_API.postman_collection.json
+- postman\Local.postman_environment.json
+
+How to import and use in Postman:
+1) Open Postman and click Import.
+2) Select both JSON files from the postman folder and import them.
+3) In the top-right environment selector, choose Local.
+4) Verify the base_url variable in the Local environment (for example: http://localhost:8081).
+5) In the collection, start with Auth > Register to create a user.
+6) Then run Auth > Login to obtain a JWT token. The collection scripts will store the token in a variable for subsequent requests.
+7) Use the User endpoints with the stored token; the Authorization header is configured at the collection level.
+
+Notes:
+- If your application runs on a different port, adjust the base_url in the environment accordingly.
+- You can duplicate the Local environment to create staging/production variants with different base URLs and credentials.
+
+
+---
+
+## Code style (IntelliJ): Google Java Style
+
+An IntelliJ IDEA code style scheme is provided at the project root:
+- java-google-style.xml
+
+How to import in IntelliJ IDEA:
+- Windows/Linux: File > Settings > Editor > Code Style
+- macOS: IntelliJ IDEA > Settings > Editor > Code Style
+- Click the gear icon next to the Scheme dropdown > Import Scheme > IntelliJ IDEA code style XML
+- Select the java-google-style.xml file in the project root
+- Apply
+
+Notes:
+- This scheme follows the official Google Java Style. Use it to reformat files (Code > Reformat Code) to keep a consistent style across the codebase.
