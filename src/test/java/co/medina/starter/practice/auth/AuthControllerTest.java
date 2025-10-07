@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {AuthController.class, EitherResponseHandler.class})
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
+@org.springframework.test.context.TestPropertySource(properties = "server.servlet.context-path=/v1")
 class AuthControllerTest {
 
     @Autowired
