@@ -17,7 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine if merge commit (non-squash)
+        id: mergecheck
+        shell: bash
+        run: |
+          parent_count=$(git show -s --format=%P HEAD | wc -w)
+          echo "Parent count: $parent_count"
+          if [ "$parent_count" -ge 2 ]; then
+            echo "is_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_merge=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up JDK 21
+        if: steps.mergecheck.outputs.is_merge == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -25,6 +38,7 @@ jobs:
           cache: 'gradle'
 
       - name: Compute next snapshot version
+        if: steps.mergecheck.outputs.is_merge == 'true'
         id: ver
         shell: bash
         run: |
@@ -41,10 +55,16 @@ jobs:
           echo "PROJECT_VERSION=$base-SNAPSHOT" >> $GITHUB_ENV
           echo "Next snapshot: $base-SNAPSHOT"
 
+      - name: Ensure gradlew is executable
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: chmod +x gradlew
+
       - name: Build and test
+        if: steps.mergecheck.outputs.is_merge == 'true'
         run: ./gradlew --no-daemon clean test
 
       - name: Publish snapshot to GitHub Packages
+        if: steps.mergecheck.outputs.is_merge == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon publish
