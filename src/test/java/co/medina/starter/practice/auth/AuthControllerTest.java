@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -66,7 +65,7 @@ class AuthControllerTest {
         given(passwordEncoder.encode("secret")).willReturn("hashed");
         given(userRepository.save(any(User.class))).willAnswer(inv -> inv.getArgument(0));
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -83,7 +82,7 @@ class AuthControllerTest {
 
         given(userRepository.existsByEmail("dup@example.com")).willReturn(true);
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -103,7 +102,7 @@ class AuthControllerTest {
         given(passwordEncoder.encode("secret")).willReturn("hashed");
         given(userRepository.save(any(User.class))).willThrow(new RuntimeException("boom"));
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
@@ -122,7 +121,7 @@ class AuthControllerTest {
         given(auth.getPrincipal()).willReturn(userDetails);
         given(jwtUtil.generateToken(userDetails)).willReturn("abc123");
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -137,7 +136,7 @@ class AuthControllerTest {
 
         given(authenticationManager.authenticate(any())).willThrow(new BadCredentialsException("bad"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
@@ -151,7 +150,7 @@ class AuthControllerTest {
 
         given(authenticationManager.authenticate(any())).willThrow(new RuntimeException("boom"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
