@@ -41,6 +41,9 @@ jobs:
           echo "PROJECT_VERSION=$base" >> $GITHUB_ENV
           echo "Next release: $base"
 
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
+
       - name: Build and test
         run: ./gradlew --no-daemon clean test
 
