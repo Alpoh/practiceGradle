@@ -17,9 +17,15 @@ jobs:
           fetch-depth: 0
 
       - name: Validate push source
-        id: validate
         shell: bash
         run: |
+          echo "Pusher: ${{ github.actor }}"
+          # Allow pushes from the github-actions bot (used by other workflows)
+          if [[ "${{ github.actor }}" == "github-actions[bot]" ]]; then
+            echo "Push is from github-actions bot. Allowing."
+            exit 0
+          fi
+
           echo "Ref: $GITHUB_REF"
           echo "SHA: $GITHUB_SHA"
           echo "Head message: '${{ github.event.head_commit.message }}'"
@@ -33,18 +39,11 @@ jobs:
           # 2) Squash merge default message often contains '(#<number>)'
           # 3) Parent count >= 2 (non-squash merge commit)
           head_msg='${{ github.event.head_commit.message }}'
-          if [[ "$head_msg" == *"Merge pull request"* ]] || [[ "$head_msg" == *"(#"* ]] || [[ "$parent_count" -ge 2 ]]; then
-            echo "is_pr_merge=true" >> "$GITHUB_OUTPUT"
+          if [[ "$head_msg" == *"Merge pull request"* ]] || [[ "$head_msg" =~ \(\\#([0-9]+)\) ]] || [[ "$parent_count" -ge 2 ]]; then
             echo "This push appears to be the result of a Pull Request merge. Allowing."
             exit 0
           fi
 
-          echo "is_pr_merge=false" >> "$GITHUB_OUTPUT"
-          echo "Direct pushes to 'master' and 'develop' are not allowed. Please create a Pull Request and merge it instead." 1>&2
-          echo "To fully enforce this, enable Branch Protection Rules in repository settings and require this workflow as a status check." 1>&2
+          echo "::error::Direct pushes to '${{ github.ref_name }}' are not allowed. Please use a Pull Request."
+          echo "::notice::To prevent direct pushes entirely, enable Branch Protection Rules in your repository settings and require this check to pass before merging."
           exit 1
-
-      - name: Summary
-        if: steps.validate.outputs.is_pr_merge == 'true'
-        run: |
-          echo "Push validated as a PR merge commit."
