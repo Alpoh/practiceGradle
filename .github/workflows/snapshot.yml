@@ -7,7 +7,6 @@ on:
 
 jobs:
   snapshot:
-    if: ${{ contains(github.event.head_commit.message, 'Merge branch') && !contains(github.event.head_commit.message, 'master') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -56,6 +55,26 @@ jobs:
           echo "PROJECT_VERSION=$base-SNAPSHOT" >> $GITHUB_ENV
           echo "Next snapshot: $base-SNAPSHOT"
 
+      - name: Ensure gradlew is executable
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: chmod +x gradlew
+
+      - name: Build and test
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: ./gradlew --no-daemon clean test
+
+      - name: Publish snapshot to GitHub Packages
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew --no-daemon publish
+
+      - name: Configure Git
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Update HELP.md with snapshot version and merge contents
         if: steps.mergecheck.outputs.is_merge == 'true'
         env:
@@ -63,7 +82,7 @@ jobs:
         shell: bash
         run: |
           SNAP_DATE=$(date +'%Y-%m-%d')
-          # Commits introduced by the merge (those not in first parent)
+          # Commits introduced by the merge (those not in the first parent)
           MERGE_COMMITS=$(git log --pretty=format:"- %s" --no-merges HEAD^1..HEAD || true)
           if [ ! -f HELP.md ]; then
             echo "# Practice" > HELP.md
@@ -79,22 +98,6 @@ jobs:
               echo "- $MSG"
             fi
           } >> HELP.md
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add HELP.md
-          git commit -m "docs(HELP): update for ${PROJECT_VERSION} snapshot" || echo "No changes to commit"
+          git commit -m "docs(HELP): update for ${PROJECT_VERSION} snapshot [skip ci]" || echo "No changes to commit"
           git push origin HEAD:develop
-
-      - name: Ensure gradlew is executable
-        if: steps.mergecheck.outputs.is_merge == 'true'
-        run: chmod +x gradlew
-
-      - name: Build and test
-        if: steps.mergecheck.outputs.is_merge == 'true'
-        run: ./gradlew --no-daemon clean test
-
-      - name: Publish snapshot to GitHub Packages
-        if: steps.mergecheck.outputs.is_merge == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon publish
