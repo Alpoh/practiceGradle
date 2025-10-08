@@ -6,6 +6,10 @@ on:
       - master
       - develop
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   enforce-pr-only:
     name: Enforce PR-only updates to protected branches
@@ -18,6 +22,11 @@ jobs:
 
       - name: Validate push source
         shell: bash
+        env:
+          GH_OWNER: ${{ github.repository_owner }}
+          GH_REPO: ${{ github.event.repository.name }}
+          GH_SHA: ${{ github.sha }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Pusher: ${{ github.actor }}"
           # Allow pushes from the github-actions bot (used by other workflows)
@@ -27,23 +36,18 @@ jobs:
           fi
 
           echo "Ref: $GITHUB_REF"
-          echo "SHA: $GITHUB_SHA"
+          echo "SHA: $GH_SHA"
           echo "Head message: '${{ github.event.head_commit.message }}'"
 
-          # Determine parent count (merge commits have >= 2 parents)
-          parent_count=$(git show -s --format=%P "$GITHUB_SHA" | wc -w)
-          echo "Parent count: $parent_count"
-
-          # Heuristics to detect PR merges:
-          # 1) Merge commit created by the default merge strategy (message contains 'Merge pull request')
-          # 2) Squash merge default message often contains '(#<number>)'
-          # 3) Parent count >= 2 (non-squash merge commit)
-          head_msg='${{ github.event.head_commit.message }}'
-          if [[ "$head_msg" == *"Merge pull request"* ]] || [[ "$head_msg" =~ \(\\#([0-9]+)\) ]] || [[ "$parent_count" -ge 2 ]]; then
-            echo "This push appears to be the result of a Pull Request merge. Allowing."
+          # Check via GitHub API whether this commit is associated with a Pull Request (supports merge/squash/rebase merges)
+          prs_json=$(curl -sSL -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$GH_OWNER/$GH_REPO/commits/$GH_SHA/pulls")
+          pr_count=$(echo "$prs_json" | jq 'length')
+          echo "Associated PR count for this commit: $pr_count"
+          if [[ "$pr_count" -gt 0 ]]; then
+            echo "This push is associated with a Pull Request merge. Allowing."
             exit 0
           fi
 
           echo "::error::Direct pushes to '${{ github.ref_name }}' are not allowed. Please use a Pull Request."
-          echo "::notice::To prevent direct pushes entirely, enable Branch Protection Rules in your repository settings and require this check to pass before merging."
+          echo "::notice::If you performed a squash merge with a custom message, this check now uses the GitHub API to detect PR associations; if it still fails, ensure the PR merge completed successfully."
           exit 1

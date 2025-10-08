@@ -38,6 +38,9 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
       - name: Build, Test and Coverage
         run: |
           ./gradlew --version
