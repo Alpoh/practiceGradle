@@ -17,7 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine if merge commit (non-squash)
+        id: mergecheck
+        shell: bash
+        run: |
+          parent_count=$(git show -s --format=%P HEAD | wc -w)
+          echo "Parent count: $parent_count"
+          if [ "$parent_count" -ge 2 ]; then
+            echo "is_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_merge=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up JDK 21
+        if: steps.mergecheck.outputs.is_merge == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -25,6 +38,7 @@ jobs:
           cache: 'gradle'
 
       - name: Compute next release version
+        if: steps.mergecheck.outputs.is_merge == 'true'
         id: ver
         shell: bash
         run: |
@@ -37,22 +51,56 @@ jobs:
             patch=$((patch+1))
             base="$major.$minor.$patch"
           fi
+          echo "last_tag=$last_tag" >> $GITHUB_OUTPUT
           echo "base=$base" >> $GITHUB_OUTPUT
           echo "PROJECT_VERSION=$base" >> $GITHUB_ENV
           echo "Next release: $base"
 
       - name: Ensure gradlew is executable
+        if: steps.mergecheck.outputs.is_merge == 'true'
         run: chmod +x gradlew
 
       - name: Build and test
+        if: steps.mergecheck.outputs.is_merge == 'true'
         run: ./gradlew --no-daemon clean test
 
+      - name: Update HELP.md with release version and notes
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        env:
+          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
+        shell: bash
+        run: |
+          REL_DATE=$(date +'%Y-%m-%d')
+          LAST_TAG=$(git tag -l 'v*' | sort -V | tail -n1)
+          if [ -z "$LAST_TAG" ]; then
+            RANGE=""
+          else
+            RANGE="$LAST_TAG..HEAD"
+          fi
+          echo "Generating release notes for range: $RANGE"
+          NOTES=$(git log --pretty=format:"- %s" --no-merges $RANGE || true)
+          {
+            echo "\n## Release v${PROJECT_VERSION} - ${REL_DATE}"
+            if [ -n "$NOTES" ]; then
+              echo "$NOTES"
+            else
+              echo "- Initial release"
+            fi
+          } >> HELP.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add HELP.md
+          git commit -m "docs(HELP): update for release v${PROJECT_VERSION}" || echo "No changes to commit"
+          git push origin HEAD:master
+
       - name: Publish release to GitHub Packages
+        if: steps.mergecheck.outputs.is_merge == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon publish
 
       - name: Create Git tag
+        if: steps.mergecheck.outputs.is_merge == 'true'
         env:
           PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
         run: |
@@ -62,6 +110,7 @@ jobs:
           git push origin "v${PROJECT_VERSION}"
 
       - name: Create GitHub Release
+        if: steps.mergecheck.outputs.is_merge == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.PROJECT_VERSION }}
