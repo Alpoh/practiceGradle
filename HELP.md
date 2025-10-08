@@ -220,3 +220,8 @@ Notes:
 - This scheme follows the official Google Java Style. Use it to reformat files (Code > Reformat Code) to keep a consistent style across the codebase.
 \n## Release v0.0.10 - 2025-10-08
 - feature/improve-github-workflow (#36)
+
+## Release v0.0.11 - 2025-10-08
+
+- Feature/improve GitHub workflow (#40)
+- feature/improve-github-workflow (#38)
