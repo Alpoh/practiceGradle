@@ -56,7 +56,7 @@ jobs:
           echo "PROJECT_VERSION=$base-SNAPSHOT" >> $GITHUB_ENV
           echo "Next snapshot: $base-SNAPSHOT"
 
-      - name: Update README.md with snapshot version and merge contents
+      - name: Update HELP.md with snapshot version and merge contents
         if: steps.mergecheck.outputs.is_merge == 'true'
         env:
           PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
@@ -65,9 +65,9 @@ jobs:
           SNAP_DATE=$(date +'%Y-%m-%d')
           # Commits introduced by the merge (those not in first parent)
           MERGE_COMMITS=$(git log --pretty=format:"- %s" --no-merges HEAD^1..HEAD || true)
-          if [ ! -f README.md ]; then
-            echo "# Practice" > README.md
-            echo "" >> README.md
+          if [ ! -f HELP.md ]; then
+            echo "# Practice" > HELP.md
+            echo "" >> HELP.md
           fi
           {
             echo "\n## Snapshot v${PROJECT_VERSION} - ${SNAP_DATE}"
@@ -78,11 +78,11 @@ jobs:
               MSG=$(git log -1 --pretty=%B)
               echo "- $MSG"
             fi
-          } >> README.md
+          } >> HELP.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "docs(README): update for ${PROJECT_VERSION} snapshot" || echo "No changes to commit"
+          git add HELP.md
+          git commit -m "docs(HELP): update for ${PROJECT_VERSION} snapshot" || echo "No changes to commit"
           git push origin HEAD:develop
 
       - name: Ensure gradlew is executable
