@@ -10,7 +10,7 @@ jobs:
     if: ${{ contains(github.event.head_commit.message, 'Merge branch') && !contains(github.event.head_commit.message, 'master') }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -55,6 +55,35 @@ jobs:
           echo "base=$base" >> $GITHUB_OUTPUT
           echo "PROJECT_VERSION=$base-SNAPSHOT" >> $GITHUB_ENV
           echo "Next snapshot: $base-SNAPSHOT"
+
+      - name: Update HELP.md with snapshot version and merge contents
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        env:
+          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
+        shell: bash
+        run: |
+          SNAP_DATE=$(date +'%Y-%m-%d')
+          # Commits introduced by the merge (those not in first parent)
+          MERGE_COMMITS=$(git log --pretty=format:"- %s" --no-merges HEAD^1..HEAD || true)
+          if [ ! -f HELP.md ]; then
+            echo "# Practice" > HELP.md
+            echo "" >> HELP.md
+          fi
+          {
+            echo "\n## Snapshot v${PROJECT_VERSION} - ${SNAP_DATE}"
+            if [ -n "$MERGE_COMMITS" ]; then
+              echo "$MERGE_COMMITS"
+            else
+              # Fallback to merge commit message
+              MSG=$(git log -1 --pretty=%B)
+              echo "- $MSG"
+            fi
+          } >> HELP.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add HELP.md
+          git commit -m "docs(HELP): update for ${PROJECT_VERSION} snapshot" || echo "No changes to commit"
+          git push origin HEAD:develop
 
       - name: Ensure gradlew is executable
         if: steps.mergecheck.outputs.is_merge == 'true'
