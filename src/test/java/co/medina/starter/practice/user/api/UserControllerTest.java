@@ -10,6 +10,7 @@ import io.vavr.control.Either;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,7 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {UserController.class, EitherResponseHandler.class})
-@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = "server.servlet.context-path=/v1")
 class UserControllerTest {
 
     @Autowired
@@ -66,7 +69,7 @@ class UserControllerTest {
         given(userService.create(any(UserRequest.class))).willReturn(Either.right(user));
         given(userMapper.toResponse(user)).willReturn(resp);
 
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/v1/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
@@ -80,7 +83,7 @@ class UserControllerTest {
         var error = new DataIntegrityViolationException("Email already exists");
         given(userService.create(any(UserRequest.class))).willReturn(Either.left(error));
 
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/v1/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isConflict())
@@ -95,7 +98,7 @@ class UserControllerTest {
         given(userService.getById(2L)).willReturn(Either.right(user));
         given(userMapper.toResponse(user)).willReturn(resp);
 
-        mockMvc.perform(get("/api/users/2"))
+        mockMvc.perform(get("/v1/api/users/2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(2));
     }
@@ -106,7 +109,7 @@ class UserControllerTest {
         var error = new NoSuchElementException("User not found");
         given(userService.getById(404L)).willReturn(Either.left(error));
 
-        mockMvc.perform(get("/api/users/404"))
+        mockMvc.perform(get("/v1/api/users/404"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User not found"));
     }
@@ -121,7 +124,7 @@ class UserControllerTest {
         given(userMapper.toResponse(user)).willReturn(UserResponse.builder().id(1L).build());
 
 
-        mockMvc.perform(get("/api/users"))
+        mockMvc.perform(get("/v1/api/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
     }
@@ -136,7 +139,7 @@ class UserControllerTest {
         given(userService.update(eq(5L), any(UserRequest.class))).willReturn(Either.right(updated));
         given(userMapper.toResponse(updated)).willReturn(resp);
 
-        mockMvc.perform(put("/api/users/5")
+        mockMvc.perform(put("/v1/api/users/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -150,7 +153,7 @@ class UserControllerTest {
         var error = new NoSuchElementException("User not found");
         given(userService.update(eq(9L), any(UserRequest.class))).willReturn(Either.left(error));
 
-        mockMvc.perform(put("/api/users/9")
+        mockMvc.perform(put("/v1/api/users/9")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isNotFound())
@@ -162,7 +165,7 @@ class UserControllerTest {
     void delete_shouldReturn204() throws Exception {
         given(userService.delete(7L)).willReturn(Either.right(null));
 
-        mockMvc.perform(delete("/api/users/7"))
+        mockMvc.perform(delete("/v1/api/users/7"))
                 .andExpect(status().isNoContent());
     }
 
@@ -172,7 +175,7 @@ class UserControllerTest {
         var error = new NoSuchElementException("User not found");
         given(userService.delete(77L)).willReturn(Either.left(error));
 
-        mockMvc.perform(delete("/api/users/77"))
+        mockMvc.perform(delete("/v1/api/users/77"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User not found"));
     }
@@ -183,7 +186,7 @@ class UserControllerTest {
         var error = new RuntimeException("boom");
         given(userService.getById(1L)).willReturn(Either.left(error));
 
-        mockMvc.perform(get("/api/users/1"))
+        mockMvc.perform(get("/v1/api/users/1"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
     }

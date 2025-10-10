@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  build-test-publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,7 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine if merge commit (non-squash)
+        id: mergecheck
+        shell: bash
+        run: |
+          parent_count=$(git show -s --format=%P HEAD | wc -w)
+          echo "Parent count: $parent_count"
+          if [ "$parent_count" -ge 2 ]; then
+            echo "is_merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_merge=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up JDK 21
+        if: steps.mergecheck.outputs.is_merge == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -25,43 +38,90 @@ jobs:
           cache: 'gradle'
 
       - name: Compute next release version
+        if: steps.mergecheck.outputs.is_merge == 'true'
         id: ver
         shell: bash
         run: |
           last_tag=$(git tag -l 'v*' | sort -V | tail -n1)
           if [ -z "$last_tag" ]; then
-            base="0.0.1"
+            version="0.0.1"
           else
             ver=${last_tag#v}
             IFS='.' read -r major minor patch <<<"$ver"
             patch=$((patch+1))
-            base="$major.$minor.$patch"
+            version="$major.$minor.$patch"
           fi
-          echo "base=$base" >> $GITHUB_OUTPUT
-          echo "PROJECT_VERSION=$base" >> $GITHUB_ENV
-          echo "Next release: $base"
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "PROJECT_VERSION=$version" >> $GITHUB_ENV
+          echo "Next release: $version"
+
+      - name: Ensure gradlew is executable
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: chmod +x gradlew
 
       - name: Build and test
+        if: steps.mergecheck.outputs.is_merge == 'true'
         run: ./gradlew --no-daemon clean test
 
       - name: Publish release to GitHub Packages
+        if: steps.mergecheck.outputs.is_merge == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon publish
 
-      - name: Create Git tag
-        env:
-          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
+      - name: Generate release notes
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        id: releasenotes
+        shell: bash
+        run: |
+          REL_DATE=$(date +'%Y-%m-%d')
+          LAST_TAG=$(git tag -l 'v*' | sort -V | tail -n1)
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="$LAST_TAG..HEAD"
+          fi
+          echo "Generating release notes for range: $RANGE"
+          NOTES=$(git log --pretty=format:"- %s" --no-merges $RANGE)
+          if [ -z "$NOTES" ]; then
+            NOTES="- Initial release"
+          fi
+          # Using a heredoc to pass multiline notes to the output
+          {
+            echo 'notes<<EOF'
+            echo "## Release v${{ env.PROJECT_VERSION }} - ${REL_DATE}"
+            echo ""
+            echo "$NOTES"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure Git
+        if: steps.mergecheck.outputs.is_merge == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "v${PROJECT_VERSION}"
-          git push origin "v${PROJECT_VERSION}"
+
+      - name: Update HELP.md with release notes
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: |
+          echo "" >> HELP.md
+          echo "${{ steps.releasenotes.outputs.notes }}" >> HELP.md
+          git add HELP.md
+          git commit -m "docs(HELP): update for release v${{ env.PROJECT_VERSION }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:master
+
+      - name: Create Git tag
+        if: steps.mergecheck.outputs.is_merge == 'true'
+        run: |
+          git tag "v${{ env.PROJECT_VERSION }}"
+          git push origin "v${{ env.PROJECT_VERSION }}"
 
       - name: Create GitHub Release
+        if: steps.mergecheck.outputs.is_merge == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.PROJECT_VERSION }}
           name: v${{ env.PROJECT_VERSION }}
+          body: ${{ steps.releasenotes.outputs.notes }}
           draft: false
           prerelease: false

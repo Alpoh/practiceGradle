@@ -1,5 +1,14 @@
+// Centralized versions to avoid hardcoding and ease upgrades
+val springBootVersion: String by extra("3.5.6")
+val springDepMgmtVersion: String by extra("1.1.7")
+val jjwtVersion: String by extra("0.11.5")
+val mapstructVersion: String by extra("1.6.2")
+val vavrVersion: String by extra("0.10.4")
+val jacocoVersion: String by extra("0.8.12")
+
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("maven-publish")
@@ -26,33 +35,35 @@ repositories {
 }
 
 dependencies {
+    // Implementations
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-rest")
     implementation("org.springframework.boot:spring-boot-starter-integration")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    // Validation
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    // JWT dependencies
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    implementation("org.springframework.boot:spring-boot-starter-validation") // Validation
+    implementation("io.jsonwebtoken:jjwt-api:$jjwtVersion")
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+    implementation("io.vavr:vavr:$vavrVersion")
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
 
-    implementation("io.vavr:vavr:0.10.4")
+    // Runtime-only
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
+    runtimeOnly("com.h2database:h2")
 
+    // Compile-only and annotation processors (grouped)
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
-
-    implementation("org.mapstruct:mapstruct:1.6.2")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.2")
-
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
-    runtimeOnly("com.h2database:h2")
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
+    // Development-only
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
+
+    // Test dependencies
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.integration:spring-integration-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -61,6 +72,20 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+jacoco {
+    toolVersion = jacocoVersion
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        csv.required.set(false)
+        html.required.set(true)
+    }
 }
 
 publishing {
