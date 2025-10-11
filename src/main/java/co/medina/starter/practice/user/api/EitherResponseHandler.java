@@ -31,8 +31,6 @@ public class EitherResponseHandler implements ResponseBodyAdvice<Object> {
                 }
                 return leftValue;
             }
-            // Right case
-            // For Either<ApiError, Void> return null to avoid serialization issues
             return either.get();
         }
         return body;
