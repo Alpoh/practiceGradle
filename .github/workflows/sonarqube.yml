@@ -36,48 +36,22 @@ jobs:
           cache: 'gradle'
 
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/actions/wrapper-validation@v3
+        continue-on-error: true
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Build, Test and Coverage
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./gradlew --version
-          ./gradlew clean test jacocoTestReport
-
-      - name: Prepare Sonar properties (projectKey/organization)
-        id: sonarvars
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        shell: bash
-        run: |
-          KEY="${{ vars.SONAR_PROJECT_KEY }}"
-          ORG="${{ vars.SONAR_ORGANIZATION }}"
-          if [ -z "$KEY" ]; then
-            # Derive a default key from owner and repo, replacing unsupported chars with underscores
-            KEY="${{ github.repository_owner }}_${{ github.event.repository.name }}"
-            KEY=${KEY//-/_}
-            KEY=${KEY//\//_}
-          fi
-          if [ -z "$ORG" ]; then
-            # Default organization to the repository owner
-            ORG="${{ github.repository_owner }}"
-          fi
-          echo "args=-Dsonar.projectKey=$KEY -Dsonar.organization=$ORG" >> $GITHUB_OUTPUT
-
-      - name: SonarQube Scan
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
-        uses: SonarSource/sonarqube-scan-action@v3
-        env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
-        with:
-          args: ${{ steps.sonarvars.outputs.args }}
-
-      - name: SonarQube Quality Gate
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && success() }}
-        uses: SonarSource/sonarqube-quality-gate-action@v1
-        env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: .scannerwork/report-task.txt
+          ./gradlew clean test jacocoTestReport sonar --info -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}

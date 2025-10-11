@@ -40,7 +40,6 @@ public class User {
     @Column(length = 500)
     private String address;
 
-    // added password for authentication (nullable for existing users)
     @Column(length = 255)
     private String password;
 }
