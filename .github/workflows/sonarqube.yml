@@ -36,22 +36,75 @@ jobs:
           cache: 'gradle'
 
       - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v3
-        continue-on-error: true
+        uses: gradle/wrapper-validation-action@v2
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Build, Test and Coverage
         run: |
           ./gradlew --version
-          ./gradlew clean test jacocoTestReport sonar --info -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+          ./gradlew clean test jacocoTestReport
+
+      - name: Normalize Sonar host URL
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        shell: bash
+        run: |
+          URL="${SONAR_HOST_URL}"
+          # If URL starts with a slash or is missing a scheme, default to SonarCloud
+          if [[ "$URL" == /* ]] || [[ ! "$URL" =~ ^https?:// ]]; then
+            echo "SONAR_HOST_URL=https://sonarcloud.io" >> "$GITHUB_ENV"
+            echo "Using default Sonar host URL: https://sonarcloud.io"
+          else
+            echo "SONAR_HOST_URL=$URL" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check Sonar host reachability
+        id: reach
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        shell: bash
+        run: |
+          URL="${SONAR_HOST_URL}"
+          echo "Checking reachability of $URL"
+          if curl -I --max-time 10 "$URL" >/dev/null 2>&1; then
+            echo "reachable=true" >> $GITHUB_OUTPUT
+          else
+            echo "reachable=false" >> $GITHUB_OUTPUT
+            echo "Sonar host not reachable; skipping scan."
+          fi
+
+      - name: Prepare Sonar properties (projectKey/organization)
+        id: sonarvars
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' }}
+        shell: bash
+        run: |
+          KEY="${{ vars.SONAR_PROJECT_KEY }}"
+          ORG="${{ vars.SONAR_ORGANIZATION }}"
+          if [ -z "$KEY" ]; then
+            # Derive a default key from owner and repo, replacing unsupported chars with underscores
+            KEY="${{ github.repository_owner }}_${{ github.event.repository.name }}"
+            KEY=${KEY//-/_}
+            KEY=${KEY//\//_}
+          fi
+          if [ -z "$ORG" ]; then
+            # Default organization to the repository owner
+            ORG="${{ github.repository_owner }}"
+          fi
+          echo "args=-Dsonar.projectKey=$KEY -Dsonar.organization=$ORG" >> $GITHUB_OUTPUT
+
+      - name: SonarQube Scan
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' }}
+        uses: SonarSource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+        with:
+          args: ${{ steps.sonarvars.outputs.args }}
+
+      - name: SonarQube Quality Gate
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' && success() }}
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
