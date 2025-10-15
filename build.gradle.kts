@@ -12,6 +12,7 @@ plugins {
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("maven-publish")
+    id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
 group = "co.medina.starter"
@@ -43,10 +44,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-validation") // Validation
+    implementation("org.springframework.boot:spring-boot-starter-mail") // Mail sending
     implementation("io.jsonwebtoken:jjwt-api:$jjwtVersion")
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
     implementation("io.vavr:vavr:$vavrVersion")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
 
     // Runtime-only
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")

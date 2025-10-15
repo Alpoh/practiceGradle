@@ -46,9 +46,36 @@ jobs:
           ./gradlew --version
           ./gradlew clean test jacocoTestReport
 
+      - name: Normalize Sonar host URL
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        shell: bash
+        run: |
+          URL="${SONAR_HOST_URL}"
+          # If URL starts with a slash or is missing a scheme, default to SonarCloud
+          if [[ "$URL" == /* ]] || [[ ! "$URL" =~ ^https?:// ]]; then
+            echo "SONAR_HOST_URL=https://sonarcloud.io" >> "$GITHUB_ENV"
+            echo "Using default Sonar host URL: https://sonarcloud.io"
+          else
+            echo "SONAR_HOST_URL=$URL" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check Sonar host reachability
+        id: reach
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        shell: bash
+        run: |
+          URL="${SONAR_HOST_URL}"
+          echo "Checking reachability of $URL"
+          if curl -I --max-time 10 "$URL" >/dev/null 2>&1; then
+            echo "reachable=true" >> $GITHUB_OUTPUT
+          else
+            echo "reachable=false" >> $GITHUB_OUTPUT
+            echo "Sonar host not reachable; skipping scan."
+          fi
+
       - name: Prepare Sonar properties (projectKey/organization)
         id: sonarvars
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' }}
         shell: bash
         run: |
           KEY="${{ vars.SONAR_PROJECT_KEY }}"
@@ -66,7 +93,7 @@ jobs:
           echo "args=-Dsonar.projectKey=$KEY -Dsonar.organization=$ORG" >> $GITHUB_OUTPUT
 
       - name: SonarQube Scan
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' }}
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' }}
         uses: SonarSource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
@@ -75,7 +102,7 @@ jobs:
           args: ${{ steps.sonarvars.outputs.args }}
 
       - name: SonarQube Quality Gate
-        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && success() }}
+        if: ${{ env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && steps.reach.outputs.reachable == 'true' && success() }}
         uses: SonarSource/sonarqube-quality-gate-action@v1
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}

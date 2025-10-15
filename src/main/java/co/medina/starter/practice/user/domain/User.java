@@ -40,7 +40,16 @@ public class User {
     @Column(length = 500)
     private String address;
 
-    // added password for authentication (nullable for existing users)
     @Column(length = 255)
     private String password;
+
+    // email verification flow
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
+    @Column(name = "verification_token", length = 64)
+    private String verificationToken;
+
+    @Column(name = "verification_expires_at", length = 40)
+    private String verificationExpiresAt; // ISO-8601 instant as string to keep it simple
 }
