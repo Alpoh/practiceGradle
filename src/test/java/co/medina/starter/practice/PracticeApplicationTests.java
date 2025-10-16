@@ -1,7 +1,6 @@
 package co.medina.starter.practice;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.mockito.InjectMocks;
 import org.springframework.boot.test.context.SpringBootTest;
 

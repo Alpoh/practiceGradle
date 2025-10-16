@@ -1,14 +1,17 @@
 package co.medina.starter.practice.user.api;
 
-import co.medina.starter.practice.security.JwtUtil;
-import co.medina.starter.practice.user.api.dto.UserRequest;
-import co.medina.starter.practice.user.api.dto.UserResponse;
-import co.medina.starter.practice.user.domain.User;
-import co.medina.starter.practice.user.service.UserService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.vavr.control.Either;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.*;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -21,19 +24,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Collections;
-import java.util.NoSuchElementException;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import co.medina.starter.practice.security.JwtUtil;
+import co.medina.starter.practice.user.api.dto.UserRequest;
+import co.medina.starter.practice.user.api.dto.UserResponse;
+import co.medina.starter.practice.user.domain.User;
+import co.medina.starter.practice.user.service.UserService;
+import io.vavr.control.Either;
 
 @WebMvcTest(controllers = {UserController.class, EitherResponseHandler.class})
 @AutoConfigureMockMvc(addFilters = false)

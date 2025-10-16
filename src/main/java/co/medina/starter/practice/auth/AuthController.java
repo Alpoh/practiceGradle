@@ -1,12 +1,5 @@
 package co.medina.starter.practice.auth;
 
-import co.medina.starter.practice.user.api.ApiError;
-import co.medina.starter.practice.user.domain.User;
-import co.medina.starter.practice.user.repo.UserRepository;
-import io.vavr.control.Either;
-import io.vavr.control.Try;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,6 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import co.medina.starter.practice.user.api.ApiError;
+import co.medina.starter.practice.user.domain.User;
+import co.medina.starter.practice.user.repo.UserRepository;
+import io.vavr.control.Either;
+import io.vavr.control.Try;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/v1/auth")
 @RequiredArgsConstructor
@@ -31,8 +32,9 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final co.medina.starter.practice.security.JwtUtil jwtUtil;
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private EmailService emailService;
+    // Optional dependency: EmailService may not be present in some profiles (e.g., local dev)
+    // Use constructor injection via ObjectProvider to avoid field injection and keep it optional
+    private final org.springframework.beans.factory.ObjectProvider<EmailService> emailServiceProvider;
 
     @org.springframework.beans.factory.annotation.Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -51,7 +53,7 @@ public class AuthController {
                     if (userRepository.existsByEmail(request.email())) {
                         throw new DataIntegrityViolationException("Email already exists");
                     }
-                    String token = java.util.UUID.randomUUID().toString().replaceAll("-", "");
+                    String token = java.util.UUID.randomUUID().toString().replace("-", "");
                     String expiresAt = java.time.Instant.now().plus(java.time.Duration.ofHours(24)).toString();
                     User user = User.builder()
                             .email(request.email())
@@ -66,13 +68,14 @@ public class AuthController {
                     userRepository.save(user);
 
                     String link = String.format("%s/v1/auth/confirm?token=%s", baseUrl, token);
-                    if (emailService != null) {
-                        emailService.sendVerificationEmail(request.email(), link);
+                    EmailService svc = emailServiceProvider.getIfAvailable();
+                    if (svc != null) {
+                        svc.sendVerificationEmail(request.email(), link);
                     }
                 })
                 .toEither()
                 .mapLeft(this::mapToApiError)
-                .map(__ -> null);
+                .map(ignored -> null);
     }
 
     @PostMapping("/login")
