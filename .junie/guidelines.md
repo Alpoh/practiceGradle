@@ -1,111 +1,120 @@
-Project Guidelines for Advanced Contributors
+Project-specific development guidelines (advanced)
 
-Overview
-This repository is a Spring Boot 3.5 (Java 21) service with JWT-based auth, a simple User domain, and a REST API. It uses:
-- Gradle Kotlin DSL with toolchain set to Java 21
-- Testing stack: JUnit 5, Spring Boot test slices (WebMvcTest, SpringBootTest), Mockito, AssertJ
-- MapStruct for DTO mapping, Lombok for boilerplate, Vavr Either for error handling
-- H2 in-memory DB by default for dev/tests
-- Code quality: Jacoco coverage, Sonar config, Qodana config
+Scope
+This document captures the details you actually need to build, test, and extend this Spring Boot 3.5 / Java 21 service. It consolidates conventions and verified commands from this repo. It intentionally omits generic Spring/Gradle basics.
 
-Build and Configuration
-- JDK/Toolchain: Gradle enforces Java 21 (java.toolchain). Install JDK 21 locally if not using the toolchain.
-- Build: Use the Gradle wrapper.
+Key stack
+- Java 21 via Gradle toolchain (no local JDK switching needed if you use Gradle wrapper)
+- Spring Boot 3.5, Security with JWT (HS256)
+- MapStruct for DTO mapping, Lombok for boilerplate
+- Vavr Either<Throwable, T> on service boundary
+- H2 in-memory DB for dev/tests by default
+- Tests: JUnit 5, Spring test slices (WebMvcTest, SpringBootTest), Mockito, AssertJ
+- Code quality: Jacoco coverage, Sonar, Qodana
+
+Build and run (verified)
+- Use the Gradle wrapper (ensures Java 21 toolchain and plugins):
   - Windows PowerShell: .\gradlew.bat build
-  - Unix/macOS: ./gradlew build
-- Run app locally: .\gradlew.bat bootRun
-  - Server runs on port 8081 (see src/main/resources/application.properties)
-  - H2 console: /h2-console (enabled)
-  - Base context path for WebMvcTest examples is set via TestPropertySource where needed
-- Dependency Management: Spring Boot + io.spring.dependency-management plugin. Versions are centralized at top of build.gradle.kts via extra properties.
-- Annotation Processors: Lombok, MapStruct, Spring configuration processor are configured. No extra IDE config should be needed if annotation processing is enabled.
-- JWT: jwt.secret and jwt.expiration-ms in application.properties. The default secret is a base64-encoded 256-bit key suitable for HS256 in dev.
-- Profiles: Only default properties file is committed; introduce application-<profile>.properties as needed.
-- Publishing (optional): The maven-publish block is configured for GitHub Packages. Set env vars in CI/local to publish:
-  - GITHUB_REPOSITORY, GITHUB_ACTOR, GITHUB_TOKEN
-- Versioning: PROJECT_VERSION environment variable overrides the Gradle project version; defaults to 0.0.1-SNAPSHOT.
+  - Run locally: .\gradlew.bat bootRun
+- Runtime details
+  - Port: 8081 (src/main/resources/application.properties)
+  - H2 console: /h2-console (enabled by default)
+  - JWT props (application.properties):
+    - jwt.secret: base64-encoded 256-bit value suitable for HS256 (dev only)
+    - jwt.expiration-ms: default token lifetime
+- Dependency management: Boot + io.spring.dependency-management. Versions centralized at top of build.gradle.kts via extra properties.
+- Publishing (optional): maven-publish to GitHub Packages. Requires env vars: GITHUB_REPOSITORY, GITHUB_ACTOR, GITHUB_TOKEN.
+- Versioning: PROJECT_VERSION env var overrides Gradle project version; falls back to 0.0.1-SNAPSHOT.
 
 Testing
-- Frameworks/Libraries:
-  - JUnit 5 (useJUnitPlatform)
-  - Spring Boot test starters (context tests and web-slice tests)
-  - Mockito (+ ByteBuddy). Note: you may see a warning about dynamic agent loading on newer JDKs; it is harmless for now. To silence in CI later, consider adding Mockito as a Java agent per Mockito docs or enabling -XX:+EnableDynamicAgentLoading when appropriate.
-  - AssertJ is used in some unit tests for fluent assertions.
-- Running tests:
-  - All tests: .\gradlew.bat test
-  - Single class: .\gradlew.bat test --tests "co.medina.starter.practice.user.api.UserControllerTest"
-  - Single method: .\gradlew.bat test --tests "co.medina.starter.practice.user.api.UserControllerTest.create_shouldReturn201"
-  - Generate coverage report (auto runs after tests due to finalizedBy): .\gradlew.bat jacocoTestReport
-    - Reports: build/reports/jacoco/test/html/index.html (HTML), XML at build/reports/jacoco/test/jacocoTestReport.xml
-- Test slices and patterns in this codebase:
-  - Web layer tests: @WebMvcTest with @AutoConfigureMockMvc(addFilters = false). Security filters are disabled in tests unless a security scenario is under test. Use @MockitoBean to provide mocks for collaborators (UserService, JwtUtil, UserDetailsService, mappers). See UserControllerTest for patterns:
-    - Stubbing with BDDMockito.given(...).willReturn(...)
-    - Validating HTTP status and JSON payloads via MockMvc
-    - Using @TestPropertySource(properties = "server.servlet.context-path=/v1") to set base context at test runtime
-  - Service unit tests: Use plain JUnit + Mockito with @Mock and @InjectMocks (no spring context). See UserServiceImplMoreTest for examples of:
-    - Stubbing repositories
-    - Verifying interactions (never/save)
-    - Asserting Vavr Either results (isRight/isLeft) and exception types/messages
-  - Context smoke test: @SpringBootTest in PracticeApplicationTests validates that the Spring context starts and the application bean wires correctly.
-- Data layer:
-  - Default datasource: in-memory H2 configured in application.properties. For repository tests, you can use @DataJpaTest and override properties if needed. Current suite focuses on service/web slices with mocked collaborators.
-- Adding a new test (guidelines):
-  - Place tests under src/test/java mirrored to main package structure.
-  - For controller tests:
-    - Use @WebMvcTest(controllers = {YourController.class, EitherResponseHandler.class}) to include exception handling advice.
-    - Mock all external dependencies with @MockitoBean.
-    - If your controller depends on mapping, mock your MapStruct mapper.
-    - If security is not the subject of the test, add @AutoConfigureMockMvc(addFilters = false).
-    - Use TestPropertySource to adjust context-path for endpoint paths if your controller assumes one.
-  - For service tests:
-    - Prefer constructor-injected @InjectMocks and @Mock; avoid loading Spring.
-    - When methods return Either<Throwable, T>, assert both left and right branches as applicable, and check messages for ApiError mapping.
-  - Naming: Adopt clear method names that state scenario and expectation, e.g., method_underTest_shouldReturnExpected_whenCondition.
-  - Assert style: Prefer AssertJ or JUnit assertions consistently; use MockMvc JSON path assertions for REST responses.
+Verified commands and patterns below come from this repository and were executed successfully during authoring.
 
-Demonstrated test addition
-- A simple JUnit test (DemoSampleTest) was created and executed locally to demonstrate adding and running a new test. It has been removed to keep the repo clean; you can create a similar test if you need a template:
-  package co.medina.starter.practice.demo;
-  import org.junit.jupiter.api.Test;
-  import static org.junit.jupiter.api.Assertions.assertEquals;
-  class DemoSampleTest { @Test void demo_shouldAddNumbers() { assertEquals(5, 2 + 3); } }
+How to run tests
+- All tests (Gradle will resolve toolchain and run JUnit 5):
+  - Windows: .\gradlew.bat test
+- Single class by FQN (verified):
+  - co.medina.starter.practice.user.api.UserControllerTest (10/10 passed on verification)
+- Single method:
+  - .\gradlew.bat test --tests "co.medina.starter.practice.user.api.UserControllerTest.POST /api/users - 201 Created happy path"
+- Coverage (Jacoco):
+  - .\gradlew.bat jacocoTestReport
+  - HTML report: build/reports/jacoco/test/html/index.html
 
-Error handling and Either mapping
-- The API uses Vavr Either<Throwable, T> in the service boundary. The web layer converts left(Throwable) to ApiError via EitherResponseHandler:
-  - NoSuchElementException -> 404 Not Found with error message
+Adding and running a new test (demonstrated)
+- Place new tests under src/test/java and mirror main package structure when relevant.
+- Example created and executed during verification (then removed to keep repo clean):
+  - File: src/test/java/co/medina/starter/practice/demo/DemoSampleTest.java
+  - Content:
+    package co.medina.starter.practice.demo;
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    class DemoSampleTest { @Test void demo_shouldAddNumbers() { assertEquals(5, 2 + 3); } }
+  - Executed via FQN: co.medina.starter.practice.demo.DemoSampleTest
+  - Result: 1/1 passed
+
+Test slice guidance (existing patterns)
+- Web layer
+  - Use @WebMvcTest(controllers = {YourController.class, EitherResponseHandler.class}) so that exception mapping is active.
+  - Disable security filters unless testing security: @AutoConfigureMockMvc(addFilters = false).
+  - Mock collaborators with @MockitoBean (e.g., UserService, JwtUtil, UserDetailsService, MapStruct mappers).
+  - Adjust base context only when necessary using @TestPropertySource(properties = "server.servlet.context-path=/v1").
+  - See src/test/java/co/medina/starter/practice/user/api/UserControllerTest.java for JSON assertions, stubbing with BDDMockito, and pagination with PageImpl.
+- Service layer
+  - Prefer plain JUnit + Mockito with @Mock and @InjectMocks (do not load Spring context).
+  - Methods return Either<Throwable, T>: test both left/right branches; check exception messages/types so EitherResponseHandler maps correctly.
+  - Refer to src/test/java/co/medina/starter/practice/user/service/UserServiceImplMoreTest.java for verification of repository interactions and Either assertions.
+- Context smoke
+  - PracticeApplicationTests uses @SpringBootTest to ensure the context wires.
+
+Mockito agent note
+- On recent JDKs you may see a ByteBuddy/Mockito dynamic agent warning during tests. It is currently harmless. To silence locally if desired:
+  - Set env var JAVA_TOOL_OPTIONS="-XX:+EnableDynamicAgentLoading" OR
+  - Configure Mockito as a Java agent as per Mockito docs.
+
+Either error handling contract (web boundary)
+- Services expose Either<Throwable, T>. The controller layer delegates error-to-HTTP mapping to EitherResponseHandler:
+  - NoSuchElementException -> 404 Not Found (message propagated)
   - DataIntegrityViolationException -> 409 Conflict
-  - Others -> 500 Internal Server Error with a generic message
-- When adding service methods, return descriptive exception types/messages in the Left branch so the handler maps them correctly.
+  - Any other Throwable -> 500 Internal Server Error with generic message
+- When implementing service methods, choose descriptive exception types/messages for Left to ensure correct HTTP mapping.
 
-Mapping
-- MapStruct is configured via annotationProcessor; mappers are declared with @Mapper(componentModel = "spring"). See UserMapper. For new DTOs:
-  - Place interfaces in a relevant package, annotate with @Mapper(componentModel = "spring").
-  - Define mapping methods; consider @BeanMapping(unmappedTargetPolicy = ReportingPolicy.IGNORE) to avoid compile-time errors when not all fields are covered.
-  - When using in controllers/services, inject and use directly; mock them in tests.
+Mapping and annotation processing
+- MapStruct mappers are declared with @Mapper(componentModel = "spring"). Example: UserMapper.
+- For partial DTOs, prefer @BeanMapping(unmappedTargetPolicy = ReportingPolicy.IGNORE) to avoid compile-time failures when target fields aren’t all mapped.
+- Lombok and MapStruct processors are configured in build.gradle.kts; ensure annotation processing is enabled in your IDE if running tests there.
 
-Security
-- Spring Security is enabled in the app, with a JwtAuthenticationFilter and a CustomUserDetailsService. In controller tests we disable filters unless testing security explicitly. For security-focused tests, use spring-security-test helpers and avoid disabling filters.
+Security notes for tests
+- Spring Security is enabled in the app. In controller tests, add @AutoConfigureMockMvc(addFilters = false) unless the test explicitly targets security.
+- For security-focused tests, pull in spring-security-test and use its helpers; don’t disable filters in those tests.
 
-Code Style and Static Analysis
-- Style: java-google-style.xml is included. Configure your IDE to use it for consistent formatting.
-- Qodana: qodana.yaml is set for JVM Community linter and JDK 21. Integrate with CI to gate on issues if desired.
-- Sonar: sonar-project.properties is configured for sources/tests, binaries, JUnit reports, and Jacoco XML coverage. Excludes *Test.java from "sources" scanning to avoid duplication.
+Data layer and defaults
+- Default datasource is H2 in-memory via application.properties. For repository tests, you can use @DataJpaTest and override properties as needed (current suite focuses on web/service slices with mocks).
+
+Code style and static analysis
+- Style: java-google-style.xml at repo root. Configure your IDE formatter accordingly.
+- Sonar: sonar-project.properties configured for sources/tests, binaries, JUnit reports, and Jacoco XML. Test files (*Test.java) are excluded from source scanning to avoid duplication.
+- Qodana: qodana.yaml is set for JVM Community and JDK 21. Integrate with CI if you need gating.
 
 CI/CD
-- GitHub Actions workflows exist for branch protection and release flows (see .github/workflows/*):
-  - snapshot.yml: build/test and publish snapshots when appropriate.
-  - release.yml: build/test and publish on tags/releases.
-  - protect-branches.yml: enforces branch policies.
-- Jacoco report generation is tied to tests and will be available in build/reports/jacoco/test/html/index.html in CI artifacts if uploaded.
+- GitHub Actions workflows:
+  - .github/workflows/snapshot.yml: build/test and publish snapshots.
+  - .github/workflows/release.yml: build/test and publish on tags/releases.
+  - .github/workflows/protect-branches.yml: branch protections.
+- Jacoco artifacts can be uploaded in CI; HTML is at build/reports/jacoco/test/html/index.html.
 
-Useful Gradle tasks
-- test: Runs unit/integration tests
-- jacocoTestReport: Generates code coverage (XML+HTML)
-- bootRun: Runs the app
-- clean: Cleans build artifacts
+Runtime endpoints and context
+- App base port is 8081. Test slices may set a temporary context-path per-test using @TestPropertySource; the application itself does not set a custom context-path by default beyond the port.
 
-Local development tips
-- If you see Mockito dynamic agent warnings on newer JDKs, they are currently harmless. If you need to silence them locally: set JAVA_TOOL_OPTIONS="-XX:+EnableDynamicAgentLoading" or migrate to using the Mockito Java agent in your build startup (see Mockito docs).
-- For JSON serialization tests, ObjectMapper is autowired by Spring in @WebMvcTest; prefer objectMapper.writeValueAsString(...) for request bodies.
-- For pagination in controllers, tests stub Page<T> with PageImpl to simulate repository results.
-- When adding endpoints, ensure you register any @ControllerAdvice or handler used broadly in your @WebMvcTest to keep error mapping consistent.
+Practical tips
+- Prefer constructor injection in services for testability.
+- Keep controllers thin; push branching into services returning Either.
+- When adding DTOs, also add/adjust MapStruct mappers and mock them in your @WebMvcTest.
+- For pagination in controller tests, use new PageImpl<>(...) to stub repository/service responses and assert JSON structure accordingly.
+
+Reference commands (Windows PowerShell)
+- Build: .\gradlew.bat build
+- Run: .\gradlew.bat bootRun
+- All tests: .\gradlew.bat test
+- One class: .\gradlew.bat test --tests "co.medina.starter.practice.user.api.UserControllerTest"
+- One method: .\gradlew.bat test --tests "co.medina.starter.practice.user.api.UserControllerTest.POST /api/users - 201 Created happy path"
+- Coverage report: .\gradlew.bat jacocoTestReport

@@ -1,9 +1,9 @@
 package co.medina.starter.practice.user.repo;
 
-import co.medina.starter.practice.user.domain.User;
+import java.util.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import co.medina.starter.practice.user.domain.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);

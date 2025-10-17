@@ -1,24 +1,22 @@
 package co.medina.starter.practice.user.service;
 
-import co.medina.starter.practice.user.api.dto.UserRequest;
-import co.medina.starter.practice.user.domain.User;
-import co.medina.starter.practice.user.repo.UserRepository;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
+import java.util.*;
+import org.junit.jupiter.api.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import co.medina.starter.practice.user.api.dto.UserRequest;
+import co.medina.starter.practice.user.domain.User;
+import co.medina.starter.practice.user.repo.UserRepository;
 
 class UserServiceImplTest {
 

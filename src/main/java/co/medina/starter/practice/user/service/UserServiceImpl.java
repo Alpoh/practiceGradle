@@ -1,18 +1,18 @@
 package co.medina.starter.practice.user.service;
 
-import co.medina.starter.practice.user.api.dto.UserRequest;
-import co.medina.starter.practice.user.domain.User;
-import co.medina.starter.practice.user.repo.UserRepository;
-import io.vavr.control.Either;
-import io.vavr.control.Try;
-import lombok.RequiredArgsConstructor;
+import java.util.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.NoSuchElementException;
+import co.medina.starter.practice.user.api.dto.UserRequest;
+import co.medina.starter.practice.user.domain.User;
+import co.medina.starter.practice.user.repo.UserRepository;
+import io.vavr.control.Either;
+import io.vavr.control.Try;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
             if (userRepository.existsByEmail(request.email())) {
                 throw new DataIntegrityViolationException("Email already exists");
             }
-        }).map(__ -> User.builder()
+        }).map(ignored -> User.builder()
                 .email(request.email())
                 .mobileNumber(request.mobileNumber())
                 .name(request.name())
@@ -53,12 +53,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Either<Throwable, User> update(Long id, UserRequest request) {
-        return getById(id)
+        // Avoid calling another @Transactional method via self (proxy would be bypassed), inline the logic
+        return Try.of(() -> userRepository.findById(id)
+                    .orElseThrow(() -> new NoSuchElementException("User not found: " + id)))
+            .toEither()
             .flatMap(existing -> Try.run(() -> {
                     if (!existing.getEmail().equals(request.email()) && userRepository.existsByEmail(request.email())) {
                         throw new DataIntegrityViolationException("Email already exists");
                     }
-                }).map(__ -> existing).toEither()
+                }).map(ignored -> existing).toEither()
             )
             .map(user -> {
                 user.setEmail(request.email());

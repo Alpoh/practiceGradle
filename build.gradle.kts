@@ -5,6 +5,7 @@ val jjwtVersion: String by extra("0.11.5")
 val mapstructVersion: String by extra("1.6.2")
 val vavrVersion: String by extra("0.10.4")
 val jacocoVersion: String by extra("0.8.12")
+val openapiVersion: String by extra("2.6.0")
 
 plugins {
     java
@@ -13,6 +14,9 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     id("maven-publish")
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
+    id("com.github.ben-manes.versions") version "0.51.0"
+    id("org.owasp.dependencycheck") version "10.0.4"
+    id("net.ossindex.audit") version "0.4.11"
 }
 
 group = "co.medina.starter"
@@ -35,7 +39,20 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    dependencies {
+        dependency("org.apache.commons:commons-lang3:3.18.0")
+    }
+}
+
 dependencies {
+    // Enforce non-vulnerable transitive versions
+    constraints {
+        implementation("org.apache.commons:commons-lang3:3.18.0") {
+            because("Address CVE-2025-48924: override transitive 3.17.0 coming from springdoc -> swagger-core")
+        }
+    }
+
     // Implementations
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -49,7 +66,7 @@ dependencies {
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
     implementation("io.vavr:vavr:$vavrVersion")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openapiVersion")
 
     // Runtime-only
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
