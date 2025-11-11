@@ -228,3 +228,5 @@ Notes:
 \n## Snapshot v0.0.12-SNAPSHOT - 2025-10-08
 - docs(HELP): update for release v0.0.11 [skip ci]
 - docs(HELP): update for release v0.0.10
+\n## Snapshot v0.0.12-SNAPSHOT - 2025-11-11
+- Merge branch 'master' into develop
