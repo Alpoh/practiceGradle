@@ -1,6 +1,5 @@
 package co.medina.starter.practice.user.api;
 
-import io.vavr.control.Either;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -9,6 +8,8 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import io.vavr.control.Either;
 
 @ControllerAdvice
 public class EitherResponseHandler implements ResponseBodyAdvice<Object> {

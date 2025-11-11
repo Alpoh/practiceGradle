@@ -1,11 +1,6 @@
 package co.medina.starter.practice.user.api;
 
-import co.medina.starter.practice.user.api.dto.UserRequest;
-import co.medina.starter.practice.user.api.dto.UserResponse;
-import co.medina.starter.practice.user.service.UserService;
-import io.vavr.control.Either;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.NoSuchElementException;
+import co.medina.starter.practice.user.api.dto.UserRequest;
+import co.medina.starter.practice.user.api.dto.UserResponse;
+import co.medina.starter.practice.user.service.UserService;
+import io.vavr.control.Either;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/v1/api/users")
