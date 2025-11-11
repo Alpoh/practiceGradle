@@ -1,6 +1,5 @@
 package co.medina.starter.practice.config;
 
-import co.medina.starter.practice.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import co.medina.starter.practice.security.JwtAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -38,6 +39,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CSRF is disabled intentionally because this service is a stateless REST API using JWT in the
+                // Authorization header. We do not use cookies or server-side sessions for authentication.
+                // Disabling CSRF here avoids requiring CSRF tokens for non-browser clients and for the H2 console in dev.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
